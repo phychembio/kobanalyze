@@ -78,37 +78,30 @@ def minimage3Dsqdist(r2,r1,boxlengthL):
 
 
 
-def calselfsqdist(statesL,previndex,currindex,indexL,q):    
-    noofatom = statesL[currindex][1]    
+def calselfsqdist(statesL,previndex,currindex,typeid,q):
+    Typemap = q.Typemap
+    noofatom = statesL[currindex][1]
     sqsum = 0
-    
+
     timediff = statesL[currindex][0] - statesL[previndex][0]
-    debugf=None
-    if timediff==20000:
-        debugf=open("debugsd.txt","w")
     if q.correctdrift == False:
-        
-        for i in indexL:
+        for i in Typemap[typeid]:
               xdiff = statesL[currindex][i][2] - statesL[previndex][i][2] + (statesL[currindex][i][5] - statesL[previndex][i][5]) * q.xboxlength
               ydiff = statesL[currindex][i][3] - statesL[previndex][i][3] + (statesL[currindex][i][6] - statesL[previndex][i][6]) * q.yboxlength
               zdiff = statesL[currindex][i][4] - statesL[previndex][i][4] + (statesL[currindex][i][7] - statesL[previndex][i][7]) * q.zboxlength
-              sqsum+=xdiff ** 2 + ydiff ** 2 + zdiff ** 2                      
-              if timediff==20000:
-                  #print i, statesL[currindex][i]                 
-                  #debugf.write("%d %s\n"%(i," ".join(map(str,statesL[currindex][i]))))
-                  debugf.write("%d %d %f\n"%(statesL[previndex][i][0],statesL[currindex][i][0],xdiff ** 2 + ydiff ** 2 + zdiff ** 2))
+              sqsum+=xdiff ** 2 + ydiff ** 2 + zdiff ** 2
     else:
-        for i in indexL:
+        for i in Typemap[typeid]:
               xdiff = statesL[currindex][i][2] - statesL[previndex][i][2] + (statesL[currindex][i][5] - statesL[previndex][i][5]) * q.xboxlength - q.driftvL[0] * timediff
               ydiff = statesL[currindex][i][3] - statesL[previndex][i][3] + (statesL[currindex][i][6] - statesL[previndex][i][6]) * q.yboxlength - q.driftvL[1] * timediff
               zdiff = statesL[currindex][i][4] - statesL[previndex][i][4] + (statesL[currindex][i][7] - statesL[previndex][i][7]) * q.zboxlength - q.driftvL[2] * timediff
               sqsum+=xdiff ** 2 + ydiff ** 2 + zdiff ** 2
-    
 
-    if sqsum > len(indexL) * 6 * 0.005 * timediff:
-          print("current: %d previous: %d  , No. of Atoms of this type: %d , sqsum: %f" % (statesL[currindex][0],statesL[previndex][0],len(indexL),sqsum))                 
-              
-    return (sqsum,len(indexL))
+    if sqsum > len(Typemap[typeid]) * 6 * 0.005 * timediff:
+          print("current: %d previous: %d  , No. of Atoms of this type: %d , sqsum: %f" %(statesL[currindex][0],statesL[previndex][0],len(Typemap[typeid]),sqsum))               
+
+
+    return (sqsum,len(Typemap[typeid]))
 
 def findwhichtimeslot(timediff,smallesttime):
     if timediff == 0:
@@ -121,36 +114,36 @@ def findwhichtimeslot(timediff,smallesttime):
 
 def calclastMSD(q,type):
     sum = 0
-    sqdistinfo = calselfsqdist(q.statesL,0,-1,q.Typemap[type],q)
+    sqdistinfo = calselfsqdist(q.statesL,0,-1,type,q)
     timediff = q.statesL[-1][0] - q.statesL[0][0]
     return (timediff,sqdistinfo[0] * 1. / sqdistinfo[1])
 
- 
-def calcreactivewaterMSD(q,MSDL,waterindexL):   
-    no_of_timeslots = len(q.statesL)    
-    currtimediff = q.statesL[-1][0] - q.statesL[0][0]    
-    
+def calcMSD(q,MSDL,type):
+    no_of_timeslots = len(q.statesL)
+    currtimediff = q.statesL[-1][0] - q.statesL[0][0]
     if no_of_timeslots > 0:
-         for i in range(no_of_timeslots - 2,-1,-1): #reading the times backards
+         for i in range(no_of_timeslots - 2,-1,-1): #reading the times backards           
             timediff = q.statesL[-1][0] - q.statesL[i][0]
-            #print("%d:%d %d:%d   %d" % (no_of_timeslots - 1,q.statesL[-1][0],i, q.statesL[i][0],timediff))            
-                    
+            print("%d:%d %d:%d   %d" % (no_of_timeslots - 1,q.statesL[-1][0],i, q.statesL\
+[i][0],timediff))
+
             if timediff > 0:
                 basetime = int(10 ** math.floor(math.log10(timediff)))
             else:
-                sys.exit("Error: time difference >= 0") 
-                
-            
-            if timediff % basetime == 0:           
-              sqdistinfo = calselfsqdist(q.statesL,i,-1,waterindexL,q)
-              if timediff == currtimediff:                  
-                  MSDL.append([timediff,sqdistinfo[0],sqdistinfo[1]]) #sqdistinfo[0]=sqdist, [1]=count
+                sys.exit("Error: time difference >= 0")
+
+
+            if timediff % basetime == 0:
+              sqdistinfo = calselfsqdist(q.statesL,i,-1,type,q)
+              if timediff == currtimediff:
+                  MSDL.append([timediff,sqdistinfo[0],sqdistinfo[1]]) #sqdistinfo[0]=sqdist, [1]=count                                                                             
               elif timediff < currtimediff:
-                  slot = findwhichtimeslot(timediff,q.smalleststep)                                  
-                  MSDL[slot + 1][1]+=sqdistinfo[0] #the +1 is for the label
-                  MSDL[slot + 1][2]+=sqdistinfo[1]                        
+                  slot = findwhichtimeslot(timediff,q.smalleststep)
+                  print slot
+                  MSDL[slot + 1][1]+=sqdistinfo[0] #the +1 is for the label               
+                  MSDL[slot + 1][2]+=sqdistinfo[1]
             else:
-                print timediff 
+                print timediff
 
                  
 def calselfangle(statesL,prev2index, previndex,currindex,typeid,q,dataL):
@@ -644,30 +637,8 @@ def compute(q):
         calcTseContourPlot(q,q.TseL1,q.TseL2,q.TseL3)
     
     count = 0
-    for type in q.MSDtypes:
-        if calcreactivewaterMSD and type==q.OWID:              
-            waterindexL=[]
-            testL=[]
-            for index,atominfo in enumerate(q.statesL[-1][3:]):
-                if atominfo[1]==q.OWID:
-                    #if q.time==20000:
-                    #    print index+3, atominfo
-                    waterindexL.append(index+3)
-                    testL.append(atominfo)
-            #if q.time==20000:                      
-            #    for info in testL:
-            #        if info[1]!=q.OWID:
-            #            print "NO!"
-            #   for i,index in enumerate(q.statesL[-1][2][q.OWID]):
-            #        if q.statesL[-1][index][0]==4:
-            #            print q.OorderL[i],q.statesL[-1][index][1], q.statesL[0][index][1]
-            #            break
-            
-
-            calcreactivewaterMSD(q,q.bigMSDL[count],waterindexL)
-            
-        else:
-            calcMSD(q,q.bigMSDL[count],type)               
+    for type in q.MSDtypes: 
+        calcMSD(q,q.bigMSDL[count],type)               
         count+=1
     count = 0
     for type in q.angletypes:

@@ -344,11 +344,11 @@ def insertCEC( state, evbf, OorderL,CECorderL,CECtimestep,q):
                  OH_molL.append(mol_id)
  #---------------------------           
             if q.calc_reactivewater:
-               tempOW_L=[] #stores (atomid, mod ID)
+               tempOL=[] #stores (atomid, mod ID)
                for item in q.IDtomolL:
-                   tempOW_L.append(item)                               
-                   for item in tempOW_L:
-                       OorderL.append([item[0],item[1]])  #stores (atomid, mod ID)
+                   tempOL.append(item)                               
+               for item in tempOL:
+                   OorderL.append([item[0],item[1]])  #stores (atomid, mod ID)
                    
                
  #-----------------------------          
@@ -381,6 +381,7 @@ def insertCEC( state, evbf, OorderL,CECorderL,CECtimestep,q):
                         molALindex=molBLindex=None
                         molAmolID=molAL[pivotL_index]
                         molBmolID=molBL[pivotL_index]
+                   
                         foundcount=0
                         for i in xrange(len(OorderL)):
                             if foundcount<2: 
@@ -419,15 +420,12 @@ def insertCEC( state, evbf, OorderL,CECorderL,CECtimestep,q):
                     if q.calc_reactivewater:#basically, the atom IDS in each type in state  are sorted
                         waterL=[]  #this is problematic when there is reactive and MSD is needed                                                                                 
                                    #this section restores the original unsorted order
-                        q.OL=q.Typemap[q.OWID]+q.Typemap[q.OHID]
-                        #OL=q.Typemap[q.OWID]
+                        #q.OL=q.Typemap[q.OWID]+q.Typemap[q.OHID]                        
 
                         for item in OorderL:                                                
-                           for i in q.OL:                               
-                               if item[0]==state[i][0]: #finding where the atom is
-                                   #print item
-                                   waterL.append(state[i])   
-                
+                           for i in q.Typemap[q.OWID]:                               
+                               if item[0]==state[i][0]: #finding where the atom is                                   
+                                   waterL.append(state[i])                   
                                    break 
                                
                                    
@@ -437,7 +435,7 @@ def insertCEC( state, evbf, OorderL,CECorderL,CECtimestep,q):
                                        
                         count=0          
                         #print CECtimestep
-                        for i in q.OL:                                                  
+                        for i in q.Typemap[q.OWID]:                                                  
                             state[i]=waterL[count]                      
                             count+=1
                         
@@ -565,10 +563,8 @@ def printresults(suffix,q):
             msdf=open('MSD_type='+str(q.MSDtypes[i])+'_'+suffix+'.txt','w')
             for MSD in q.bigMSDL[i][1:]:
                 msdf.write("%d   %f \n" %( MSD[0] , MSD[1]/MSD[2]))
-            lastMSD=None
-            if not q.calc_reactivewater:
-               lastMSD=kobcompute.calclastMSD(q,q.MSDtypes[i])            
-               msdf.write("%d   %f \n" %( lastMSD[0] , lastMSD[1]))
+            lastMSD=kobcompute.calclastMSD(q,q.MSDtypes[i])
+            msdf.write("%d   %f \n" %( lastMSD[0] , lastMSD[1]))
             msdf.close()
 
 
